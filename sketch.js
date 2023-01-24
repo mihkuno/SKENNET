@@ -1,5 +1,12 @@
+const COLORS = {
+    RED: [255,0,0],
+    GREEN: [0,255,0],
+    BLUE: [0,0,255]
+}
+
 let model;
-let targetColor = [255,0,0];
+let state = 'COLLECTION'; // COLLECTION & PREDICTION
+let targetColor = 'RED';
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -7,31 +14,61 @@ function setup() {
     let options = {
         inputs: ['xCoord','yCoord'],
         outputs: ['color'],
-        task: 'classification'
+        task: 'classification',
+        debug: 'true'
     }
 
     model = ml5.neuralNetwork(options);
 }
 
 function keyPressed() {
+
     switch(key) {
+        case 'p':
+            print('training started..');
+            model.normalizeData();
+            let options = {
+                epochs: 200
+            }
+            model.train(options, 
+                        whileTraining, 
+                        finishedTraining);
+            break;
         case '1': //r
-            targetColor = [255, 0, 0];
-            print('RED');
+            targetColor = 'RED';
             break;
         case '2': //g
-            targetColor = [0, 255, 0];
-            print('GREEN');
+            targetColor = 'GREEN';
             break;
         case '3': //b
-            targetColor = [0, 0, 255];
-            print('BLUE');
+            targetColor = 'BLUE';
             break;
     }
+    print(targetColor);
+}
+
+function whileTraining(epoch, loss) {
+    print(epoch)
+}
+
+function finishedTraining() {
+    print('training complete..')
 }
 
 function mousePressed() {
+
+    let inputs = {
+        x: mouseX,
+        y: mouseY
+    }
+
+    let target = {
+        label: targetColor
+    }
+
+    model.addData(inputs, target);
+
     stroke(0);
-    fill(...targetColor);
+    fill(...COLORS[targetColor]);
     circle(mouseX,mouseY,80);
 }
