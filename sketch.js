@@ -1,9 +1,3 @@
-const COLORS = {
-    RED: [255,0,0],
-    GREEN: [0,255,0],
-    BLUE: [0,0,255]
-}
-
 let model;
 let state = 'COLLECTION'; // COLLECTION, TRAINING, PREDICTION
 let targetColor = 'RED';
@@ -29,12 +23,6 @@ function keyPressed() {
             state = 'TRAINING'
             print('training started..');
             
-            let options = {
-                epochs: 200
-            }
-
-            model.normalizeData();
-
             const whileTraining = (epoch, loss)  => {
                 print(epoch)
             }
@@ -43,6 +31,12 @@ function keyPressed() {
                 print('training complete..');
                 state = 'PREDICTION';
             }
+            
+            let options = {
+                epochs: 200
+            }
+
+            model.normalizeData();
 
             model.train(options, 
                         whileTraining, 
@@ -62,34 +56,39 @@ function keyPressed() {
 
 function mousePressed() {
 
-    let inputs = {
+    const colors = {
+        RED: [255,0,0],
+        GREEN: [0,255,0],
+        BLUE: [0,0,255]
+    }
+
+    const inputs = {
         x: mouseX,
         y: mouseY
     }
 
-    const createCircle = (color) => {
+    const createCircle = () => {
         stroke(0);
-        fill(...COLORS[color]);
-        circle(mouseX,mouseY,80);
+        fill(...colors[targetColor]);
+        circle(inputs.x, inputs.y ,80);
     }
 
     if (state == 'COLLECTION') {
-        
         let target = {
             label: targetColor
         }
-        
         model.addData(inputs, target);
         createCircle(targetColor);
-
-    } else if (state == 'PREDICTION') {
-        
-        model.classify(inputs, (error, results) => {
+    } 
+    
+    else if (state == 'PREDICTION') {
+        const outputs = (error, results) => {
             if (error) return;
             
             targetColor = results[0].label;
             createCircle(targetColor);
             print(results);
-        });
+        }
+        model.classify(inputs, outputs);
     }
 }
