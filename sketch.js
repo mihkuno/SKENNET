@@ -5,11 +5,12 @@ const COLORS = {
 }
 
 let model;
-let state = 'COLLECTION'; // COLLECTION & PREDICTION
+let state = 'COLLECTION'; // COLLECTION, TRAINING, PREDICTION
 let targetColor = 'RED';
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    background(180);
 
     let options = {
         inputs: ['xCoord','yCoord'],
@@ -25,11 +26,24 @@ function keyPressed() {
 
     switch(key) {
         case 'p':
+            state = 'TRAINING'
             print('training started..');
-            model.normalizeData();
+            
             let options = {
                 epochs: 200
             }
+
+            model.normalizeData();
+
+            const whileTraining = (epoch, loss)  => {
+                print(epoch)
+            }
+
+            const finishedTraining = () => {
+                print('training complete..');
+                state = 'PREDICTION';
+            }
+
             model.train(options, 
                         whileTraining, 
                         finishedTraining);
@@ -44,15 +58,6 @@ function keyPressed() {
             targetColor = 'BLUE';
             break;
     }
-    print(targetColor);
-}
-
-function whileTraining(epoch, loss) {
-    print(epoch)
-}
-
-function finishedTraining() {
-    print('training complete..')
 }
 
 function mousePressed() {
@@ -62,13 +67,29 @@ function mousePressed() {
         y: mouseY
     }
 
-    let target = {
-        label: targetColor
+    const createCircle = (color) => {
+        stroke(0);
+        fill(...COLORS[color]);
+        circle(mouseX,mouseY,80);
     }
 
-    model.addData(inputs, target);
+    if (state == 'COLLECTION') {
+        
+        let target = {
+            label: targetColor
+        }
+        
+        model.addData(inputs, target);
+        createCircle(targetColor);
 
-    stroke(0);
-    fill(...COLORS[targetColor]);
-    circle(mouseX,mouseY,80);
+    } else if (state == 'PREDICTION') {
+        
+        model.classify(inputs, (error, results) => {
+            if (error) return;
+            
+            targetColor = results[0].label;
+            createCircle(targetColor);
+            print(results);
+        });
+    }
 }
