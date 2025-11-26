@@ -55,39 +55,53 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  const colors = {
-    RED: [255, 0, 0],
-    GREEN: [0, 255, 0],
-    BLUE: [0, 0, 255]
-  };
 
-  // FIXED: inputs now match model definition (x, y)
-  const inputs = {
-    x: mouseX,
-    y: mouseY
-  };
+    const colors = {
+        RED: [255,0,0],
+        GREEN: [0,255,0],
+        BLUE: [0,0,255]
+    }
 
-  const drawCircle = () => {
-    stroke(0);
-    fill(...colors[targetColor]);
-    circle(inputs.x, inputs.y, 80);
-  };
+    // --- FIX IS HERE: Change 'x' to 'xCoord' and 'y' to 'yCoord' ---
+    const inputs = {
+        xCoord: mouseX, // Must match the name in setup()
+        yCoord: mouseY  // Must match the name in setup()
+    }
 
-  if (state === 'COLLECTION') {
-    model.addData(inputs, { label: targetColor });
-    drawCircle();
-  }
-
-  else if (state === 'PREDICTION') {
-    model.classify(inputs, (err, results) => {
-      if (err) {
-        print(err);
-        return;
-      }
-
-      targetColor = results[0].label; // predicted label
-      drawCircle();
-      print(results);
-    });
-  }
+    const createCircle = () => {
+        stroke(0);
+        // The fill color needs to be set based on the global targetColor
+        // which might be set by key press or predicted by the model.
+        fill(...colors[targetColor]);
+        circle(inputs.xCoord, inputs.yCoord ,80);
+    }
+    
+    // An optional improvement: Ensure the drawing only happens when collecting or predicting
+    if (state == 'COLLECTION') {
+        let target = {
+            color: targetColor // Input expects keys 'xCoord', 'yCoord'. Target expects 'color'.
+        }
+        // console.log('Adding data:', inputs, target); // Optional debugging
+        model.addData(inputs, target);
+        createCircle(targetColor);
+    } 
+    
+    else if (state == 'PREDICTION') {
+        const outputs = (error, results) => {
+            if (error) {
+                print('Prediction Error:', error);
+                return;
+            }
+            
+            // The label key is 'color', not 'label', based on your model definition:
+            // outputs: ['color']
+            targetColor = results[0].label;
+            
+            // To be robust, use the raw prediction values instead of the global mouseX/mouseY
+            // since you want to draw *where the click occurred*.
+            createCircle(targetColor);
+            print(results);
+        }
+        model.classify(inputs, outputs);
+    }
 }
