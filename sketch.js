@@ -2,7 +2,11 @@ let model;
 let state = 'COLLECTION'; // COLLECTION, TRAINING, PREDICTION
 let targetColor = 'RED';
 
-function setup() {
+async function setup() {
+    // Make sure TensorFlow is ready
+    await tf.setBackend('webgl'); // or 'cpu'
+    await tf.ready();
+    
     createCanvas(windowWidth, windowHeight);
     background(180);
 
