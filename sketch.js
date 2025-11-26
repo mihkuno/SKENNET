@@ -1,98 +1,93 @@
 let model;
-let state = 'COLLECTION'; // COLLECTION, TRAINING, PREDICTION
+let state = 'COLLECTION'; // COLLECTION → TRAINING → PREDICTION
 let targetColor = 'RED';
 
 async function setup() {
-    // Make sure TensorFlow is ready
-    await tf.setBackend('webgl'); // or 'cpu'
-    await tf.ready();
-    
-    createCanvas(windowWidth, windowHeight);
-    background(180);
+  // TensorFlow backend
+  await tf.setBackend('webgl');
+  await tf.ready();
 
-    let options = {
-        inputs: ['xCoord','yCoord'],
-        outputs: ['color'],
-        task: 'classification',
-        debug: 'true'
-    }
+  createCanvas(windowWidth, windowHeight);
+  background(180);
 
-    model = ml5.neuralNetwork(options);
+  // IMPORTANT: inputs must match the keys you use later (x, y)
+  let options = {
+    inputs: ['x','y'],
+    outputs: ['color'],
+    task: 'classification',
+    debug: true
+  };
+
+  model = ml5.neuralNetwork(options);
 }
 
 function keyPressed() {
+  switch (key) {
+    case 'p':
+      state = 'TRAINING';
+      print('Training started...');
 
-    switch(key) {
-        case 'p':
-            state = 'TRAINING'
-            print('training started..');
-            
-            const whileTraining = (epoch, loss)  => {
-                print(epoch)
-            }
+      const whileTraining = (epoch, logs) => {
+        if (logs) print(`Epoch ${epoch} | Loss: ${logs.loss}`);
+      };
 
-            const finishedTraining = () => {
-                print('training complete..');
-                state = 'PREDICTION';
-            }
-            
-            let options = {
-                epochs: 200
-            }
+      const finishedTraining = () => {
+        print('Training complete!');
+        state = 'PREDICTION';
+      };
 
-            model.normalizeData();
+      model.normalizeData();
 
-            model.train(options, 
-                        whileTraining, 
-                        finishedTraining);
-            break;
-        case '1': //r
-            targetColor = 'RED';
-            break;
-        case '2': //g
-            targetColor = 'GREEN';
-            break;
-        case '3': //b
-            targetColor = 'BLUE';
-            break;
-    }
+      let trainOptions = { epochs: 200 };
+      model.train(trainOptions, whileTraining, finishedTraining);
+      break;
+
+    case '1':
+      targetColor = 'RED';
+      break;
+    case '2':
+      targetColor = 'GREEN';
+      break;
+    case '3':
+      targetColor = 'BLUE';
+      break;
+  }
 }
 
 function mousePressed() {
+  const colors = {
+    RED: [255, 0, 0],
+    GREEN: [0, 255, 0],
+    BLUE: [0, 0, 255]
+  };
 
-    const colors = {
-        RED: [255,0,0],
-        GREEN: [0,255,0],
-        BLUE: [0,0,255]
-    }
+  // FIXED: inputs now match model definition (x, y)
+  const inputs = {
+    x: mouseX,
+    y: mouseY
+  };
 
-    const inputs = {
-        x: mouseX,
-        y: mouseY
-    }
+  const drawCircle = () => {
+    stroke(0);
+    fill(...colors[targetColor]);
+    circle(inputs.x, inputs.y, 80);
+  };
 
-    const createCircle = () => {
-        stroke(0);
-        fill(...colors[targetColor]);
-        circle(inputs.x, inputs.y ,80);
-    }
+  if (state === 'COLLECTION') {
+    model.addData(inputs, { label: targetColor });
+    drawCircle();
+  }
 
-    if (state == 'COLLECTION') {
-        let target = {
-            label: targetColor
-        }
-        model.addData(inputs, target);
-        createCircle(targetColor);
-    } 
-    
-    else if (state == 'PREDICTION') {
-        const outputs = (error, results) => {
-            if (error) return;
-            
-            targetColor = results[0].label;
-            createCircle(targetColor);
-            print(results);
-        }
-        model.classify(inputs, outputs);
-    }
+  else if (state === 'PREDICTION') {
+    model.classify(inputs, (err, results) => {
+      if (err) {
+        print(err);
+        return;
+      }
+
+      targetColor = results[0].label; // predicted label
+      drawCircle();
+      print(results);
+    });
+  }
 }
